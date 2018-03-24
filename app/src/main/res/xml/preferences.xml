@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <PreferenceCategory android:title="Mean Filter Smoothing" >
+        <SwitchPreference
+            android:defaultValue="false"
+            android:dialogTitle="Enable Mean Filter"
+            android:key="mean_filter_smoothing_enabled_preference"
+            android:summaryOff="Mean Filter is Off"
+            android:summaryOn="Mean Filter is On"
+            android:title="Enable Mean Filter" />
+
+        <EditTextPreference
+            android:defaultValue="@string/value_default_mean_filter"
+            android:dialogMessage="Set Mean Filter Time Constant (Seconds)"
+            android:dialogTitle="Time Constant"
+            android:inputType="numberDecimal"
+            android:key="mean_filter_smoothing_time_constant_preference"
+            android:title="Set Mean Filter Time Constant" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Complimentary Quaternion" >
+        <SwitchPreference
+            android:defaultValue="false"
+            android:dialogTitle="Enable Complimentary Quaternion"
+            android:key="imuocf_quaternion_enabled_preference"
+            android:summaryOff="Complimentary Quaternion is Off"
+            android:summaryOn="Complimentary Quaternion is On"
+            android:title="Enable Complimentary Quaternion" />
+
+        <EditTextPreference
+            android:defaultValue="@string/value_default_complimentary_filter"
+            android:dialogMessage="Set Filter Coefficient"
+            android:dialogTitle="Coefficient"
+            android:inputType="numberDecimal"
+            android:key="imuocf_quaternion_coeff_preference"
+            android:title="Set Filter Coefficient" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Kalman Quaternion" >
+        <SwitchPreference
+            android:defaultValue="false"
+            android:dialogTitle="Enable Kalman Quaternion"
+            android:inputType="numberDecimal"
+            android:key="imuokf_quaternion_enabled_preference"
+            android:summaryOff="Kalman Quaternion is Off"
+            android:summaryOn="Kalman Quaternion is On"
+            android:title="Enable Kalman Quaternion" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

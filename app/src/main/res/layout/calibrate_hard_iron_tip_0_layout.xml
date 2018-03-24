@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <ScrollView
+        android:id="@+id/ScrollView01"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:fillViewport="true" >
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical" >
+
+            <TextView
+                android:id="@+id/text_header"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp"
+                android:fontFamily="sans-serif-condensed"
+                android:text="Awesome Tips:"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:textColor="@color/dark_orange" />
+
+            <TextView
+                android:id="@+id/text_info"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp"
+                android:text="A hard-iron calibration can compensate for distortions in the earths magnetic field caused by ferrous metals allowing the compass to peform optimally. A calibration allows the application to accuratly estimate the bearing of the device in metal structures like cars, boats or planes. The calibration process requires a 360-degree sample of the magnetic field. For the best results, hold or mount the device and keep it as flat as possible while rotating it. " />
+
+            <ImageView
+                android:id="@+id/image_rotation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:padding="10dp"
+                android:src="@drawable/circle" />
+
+            <Button
+                android:id="@+id/button_finished"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:fontFamily="sans-serif-condensed"
+                android:text="I got this."
+                android:background="@color/colorPrimary"
+                android:textColor="#FFF"
+                android:textStyle="bold"/>
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>
