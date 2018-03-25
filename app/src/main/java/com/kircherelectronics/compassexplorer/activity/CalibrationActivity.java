@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -12,6 +13,10 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -29,6 +34,11 @@ import com.kircherelectronics.fsensor.util.offset.Calibration;
 import com.kircherelectronics.fsensor.util.offset.CalibrationUtil;
 import com.kircherelectronics.fsensor.util.offset.FitPoints;
 import com.kircherelectronics.fsensor.util.offset.ThreeSpacePoint;
+
+import org.apache.commons.math3.linear.Array2DRowRealMatrix;
+import org.apache.commons.math3.linear.ArrayRealVector;
+import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.linear.RealVector;
 
 import java.util.ArrayList;
 
@@ -135,7 +145,7 @@ public class CalibrationActivity extends AppCompatActivity implements OnClickLis
 	 * calculations
 	 */
 
-    private static final String tag = CalibrationActivity.class
+    private static final String TAG = CalibrationActivity.class
             .getSimpleName();
 
     private final static int DELTA = 1;
@@ -146,10 +156,10 @@ public class CalibrationActivity extends AppCompatActivity implements OnClickLis
 
     private GaugeCalibration gaugeCalibration;
 
+    private Calibration calibration;
+
     // Indicate the algorithm is currently calibrating the hard iron offset.
     private boolean hardIronCalibrating = false;
-    // Indicate the instance has permission to write to the shared prefs.
-    private boolean write = true;
 
     private float x = 0.0f;
     private float xOld = 0.0f;
@@ -161,7 +171,7 @@ public class CalibrationActivity extends AppCompatActivity implements OnClickLis
     // y-axis hard iron offset
     private float hardIronBeta = 0.0f;
     // z-axis hard iron offset
-    private float hardIconGamma = 0.0f;
+    private float hardIronGamma = 0.0f;
 
     // x-axis soft iron scalar
     private float softIronAlpha = 0.0f;
@@ -199,7 +209,15 @@ public class CalibrationActivity extends AppCompatActivity implements OnClickLis
         // Change the view here (for now).
         setContentView(R.layout.layout_calibrate);
 
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        if(getSupportActionBar()!=null) {
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
+        }
+
         gaugeCalibration = findViewById(R.id.gauge_calibration);
+
+        calibration = getCalibrationFromPrefs();
 
         threeSpacePointList = new ArrayList<>();
 
@@ -215,6 +233,31 @@ public class CalibrationActivity extends AppCompatActivity implements OnClickLis
         meanFilterMagnetic = new MeanFilter();
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.calibrate, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_reset_calibration:
+                SharedPreferences prefs = getSharedPreferences(HardIronPreferences.KEY, Activity.MODE_PRIVATE);
+                prefs.edit().clear().apply();
+
+                CharSequence text = "Calibration has been reset.";
+                int duration = Toast.LENGTH_SHORT;
+
+                Toast toast = Toast.makeText(this, text, duration);
+                toast.show();
+
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
     public void onStart() {
         super.onStart();
 
@@ -227,7 +270,7 @@ public class CalibrationActivity extends AppCompatActivity implements OnClickLis
         // Register for sensor updates.
         sensorManager.registerListener(this, sensorManager
                         .getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
-                SensorManager.SENSOR_DELAY_FASTEST);
+                SensorManager.SENSOR_DELAY_NORMAL);
 
         sensorManager.registerListener(this, sensorManager
                         .getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD),
@@ -235,7 +278,7 @@ public class CalibrationActivity extends AppCompatActivity implements OnClickLis
 
         sensorManager.registerListener(this,
                 sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE),
-                SensorManager.SENSOR_DELAY_FASTEST);
+                SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     /**
@@ -255,11 +298,14 @@ public class CalibrationActivity extends AppCompatActivity implements OnClickLis
         } else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
             // Android reuses events, so you probably want a copy
             System.arraycopy(event.values, 0, tempMagnetic, 0, event.values.length);
-            orientationFusion.setMagneticField(meanFilterMagnetic.filter(this.tempMagnetic));
-            this.magnetic = TiltCompensationUtil.compensateTilt(new float[]{tempMagnetic[0], -tempMagnetic[1], tempMagnetic[2]}, new float[]{fusedOrientation[1], fusedOrientation[2], 0});
-            this.magnetic[1] = -this.magnetic[1];
 
-            if(hardIronCalibrating) {
+            tempMagnetic = CalibrationUtil.calibrate(tempMagnetic, calibration);
+            orientationFusion.setMagneticField(meanFilterMagnetic.filter(this.tempMagnetic));
+
+            this.magnetic = TiltCompensationUtil.compensateTilt(new float[]{tempMagnetic[0], -tempMagnetic[1], tempMagnetic[2]}, new float[]{fusedOrientation[1],
+                    fusedOrientation[2], 0});
+
+            if (hardIronCalibrating) {
                 addMeasurement();
             }
 
@@ -412,7 +458,7 @@ public class CalibrationActivity extends AppCompatActivity implements OnClickLis
         // Set Vy
         hardIronBeta = (float) calibration.offset.getEntry(1);
         // Set Vz
-        hardIconGamma = (float) calibration.offset.getEntry(2);
+        hardIronGamma = (float) calibration.offset.getEntry(2);
 
         softIronAlpha = (float) calibration.scalar.getEntry(0, 0);
         softIronBeta = (float) calibration.scalar.getEntry(1, 1);
@@ -426,11 +472,20 @@ public class CalibrationActivity extends AppCompatActivity implements OnClickLis
      * Write new calibrations out to the shared preferences.
      */
     private void writeHardIronPrefs() {
-        if (write) {
+        if(validateCalibration()) {
+
+            hardIronAlpha =  hardIronAlpha + (float) calibration.offset.getEntry(0);
+            hardIronBeta = hardIronBeta + (float) calibration.offset.getEntry(1);
+            hardIronGamma = hardIronGamma + (float) calibration.offset.getEntry(2);
+
             SharedPreferences.Editor editor = getSharedPreferences(HardIronPreferences.KEY, Activity.MODE_PRIVATE).edit();
             editor.putFloat(HardIronPreferences.HARD_IRON_ALPHA, hardIronAlpha);
             editor.putFloat(HardIronPreferences.HARD_IRON_BETA, hardIronBeta);
-            editor.putFloat(HardIronPreferences.HARD_IRON_GAMMA, hardIconGamma);
+            editor.putFloat(HardIronPreferences.HARD_IRON_GAMMA, hardIronGamma);
+
+            softIronAlpha = softIronAlpha * softIronAlpha;
+            softIronBeta = softIronBeta * softIronBeta;
+            softIronGamma = softIronGamma * softIronGamma ;
 
             editor.putFloat(HardIronPreferences.SOFT_IRON_ALPHA, softIronAlpha);
             editor.putFloat(HardIronPreferences.SOFT_IRON_BETA, softIronBeta);
@@ -444,12 +499,38 @@ public class CalibrationActivity extends AppCompatActivity implements OnClickLis
             Toast toast = Toast.makeText(this, text, duration);
             toast.show();
         } else {
-            CharSequence text = "The calibration has not been saved.";
+            CharSequence text = "The calibration was not successful.";
             int duration = Toast.LENGTH_SHORT;
 
             Toast toast = Toast.makeText(this, text, duration);
             toast.show();
         }
+    }
+
+    private boolean validateCalibration() {
+        Log.d(TAG, "Hard Iron -> Alpha: " + hardIronAlpha + " Beta: " + hardIronBeta + " Gamma: " + hardIronGamma);
+
+        if(Float.isInfinite(hardIronAlpha) || Float.isNaN(hardIronAlpha)){
+            return false;
+        } else if(Float.isInfinite(hardIronBeta) || Float.isNaN(hardIronBeta)){
+            return false;
+        }
+        else if(Float.isInfinite(hardIronGamma) || Float.isNaN(hardIronGamma)){
+            return false;
+        }
+
+        Log.d(TAG, "Soft Iron -> Alpha: " + softIronAlpha + " Beta: " + softIronBeta + " Gamma: " + softIronGamma);
+
+        if(Float.isInfinite(softIronAlpha) || Float.isNaN(softIronAlpha)){
+            return false;
+        } else if(Float.isInfinite(softIronBeta) || Float.isNaN(softIronBeta)){
+            return false;
+        }
+        else if(Float.isInfinite(softIronGamma) || Float.isNaN(softIronGamma)){
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -467,32 +548,14 @@ public class CalibrationActivity extends AppCompatActivity implements OnClickLis
                 .setCancelable(false)
                 .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        write = true;
                         writeHardIronPrefs();
 
                         dialog.cancel();
-
-                        CharSequence text = "The offset was saved.";
-                        int duration = Toast.LENGTH_SHORT;
-
-                        Toast toast = Toast.makeText(
-                                CalibrationActivity.this, text,
-                                duration);
-                        toast.show();
                     }
                 })
                 .setNegativeButton("No", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        write = false;
                         dialog.cancel();
-
-                        CharSequence text = "The offset was not saved.";
-                        int duration = Toast.LENGTH_SHORT;
-
-                        Toast toast = Toast.makeText(
-                                CalibrationActivity.this, text,
-                                duration);
-                        toast.show();
                     }
                 });
 
@@ -506,4 +569,30 @@ public class CalibrationActivity extends AppCompatActivity implements OnClickLis
     @Override
     public void onAccuracyChanged(Sensor sensor, int i) {
     }
+
+    private Calibration getCalibrationFromPrefs() {
+
+        SharedPreferences prefs = getSharedPreferences(HardIronPreferences.KEY, Activity.MODE_PRIVATE);
+        float hardIronAlpha = prefs.getFloat(HardIronPreferences.HARD_IRON_ALPHA, 0);
+        float hardIronBeta = prefs.getFloat(HardIronPreferences.HARD_IRON_BETA, 0);
+        float hardIronGamma = prefs.getFloat(HardIronPreferences.HARD_IRON_GAMMA, 0);
+
+        RealVector offset = new ArrayRealVector(3);
+
+        offset.setEntry(0, hardIronAlpha);
+        offset.setEntry(1, hardIronBeta);
+        offset.setEntry(2, hardIronGamma);
+
+        float softIronAlpha = prefs.getFloat(HardIronPreferences.SOFT_IRON_ALPHA, 1);
+        float softIronBeta = prefs.getFloat(HardIronPreferences.SOFT_IRON_BETA, 1);
+        float softIronGamma = prefs.getFloat(HardIronPreferences.SOFT_IRON_GAMMA, 1);
+
+        RealMatrix scalar = new Array2DRowRealMatrix(3, 3);
+        scalar.setEntry(0, 0, softIronAlpha);
+        scalar.setEntry(1, 1, softIronBeta);
+        scalar.setEntry(2, 2, softIronGamma);
+
+        return new Calibration(scalar, offset);
+    }
+
 }

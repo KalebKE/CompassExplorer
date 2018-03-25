@@ -8,6 +8,7 @@
     <string name="sensor_unavailable">Unavailable</string>
     <string name="action_config">Settings</string>
     <string name="action_calibrate">Calibrate</string>
+    <string name="action_reset_calibration">Reset Calibration</string>
     <string name="action_reset">Reset</string>
     <string name="label_x_axis">X-Axis:</string>
     <string name="label_y_axis">Y-Axis:</string>
@@ -15,7 +16,6 @@
     <string name="value_default">0.0</string>
     <string name="value_default_mean_filter">0.5</string>
     <string name="value_default_complimentary_filter">0.5</string>
-    <string name="developer_url">KircherElectronics.com</string>
     <string name="confirm_label">I got this.</string>
     <string name="action_options">Options</string>
     <string name="action_help">Help</string>

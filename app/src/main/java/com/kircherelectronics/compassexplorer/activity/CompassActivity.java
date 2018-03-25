@@ -119,14 +119,10 @@ public class CompassActivity extends AppCompatActivity implements SensorEventLis
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.gyroscope, menu);
+        getMenuInflater().inflate(R.menu.compass, menu);
         return true;
     }
 
-    /**
-     * Event Handling for Individual menu item selected Identify single menu
-     * item by it's id
-     */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
@@ -192,11 +188,12 @@ public class CompassActivity extends AppCompatActivity implements SensorEventLis
         } else  if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
             // Android reuses events, so you probably want a copy
             System.arraycopy(event.values, 0, magnetic, 0, event.values.length);
-            orientationFusion.setMagneticField(this.magnetic);
 
             if(calibrated) {
                 magnetic = CalibrationUtil.calibrate(magnetic, calibration);
             }
+
+            orientationFusion.setMagneticField(this.magnetic);
 
             if(tiltCompensated) {
                 float[] output = TiltCompensationUtil.compensateTilt(new float[]{magnetic[0], -magnetic[1], magnetic[2]}, new float[]{fusedOrientation[1], fusedOrientation[2], 0});

@@ -112,8 +112,6 @@ public final class GaugeCalibration extends View {
             this.y = ((faceRect.bottom - faceRect.top) / 200) * y
                     + faceRect.centerY();
 
-            Log.d("kbk", "X: " + x + " Y: " + y);
-
             xList.addFirst(this.x);
             yList.addFirst(this.y);
             colorList.addFirst(color);

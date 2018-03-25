@@ -1,0 +1,11 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <item
+        android:id="@+id/options"
+        android:title="@string/action_options">
+        <item
+            android:id="@+id/action_reset_calibration"
+            android:title="@string/action_reset_calibration"/>
+    </item>
+
+</menu>
